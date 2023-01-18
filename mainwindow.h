@@ -22,6 +22,8 @@ public:
 
 
 private slots:
+    void move_arm();
+
     void on_lower_arm_angle_valueChanged(double arg1);
 
     void on_upper_arm_angle_valueChanged(double arg1);
@@ -30,7 +32,29 @@ private slots:
 
     void on_arm_y_valueChanged(double arg1);
 
+    void on_cone_3_clicked();
+
+    void on_grab_clicked();
+
+    void on_hold_clicked();
+
+    void on_place_cone_3_clicked();
+
+    void on_pre_place_clicked();
+
 private:
     Ui::MainWindow *ui;
 };
+
+class runSim : public QObject {
+    Q_OBJECT
+
+public slots:
+    void runThread();
+signals:
+    void move_arm();
+    void command_arm();
+
+};
+
 #endif // MAINWINDOW_H

@@ -4,6 +4,7 @@
 #include <QGraphicsScene>
 #include <QtMath>
 #include <QDebug>
+#include <QThread>
 
 
 //Low pivot to ground 10.75
@@ -41,11 +42,28 @@ MainWindow::MainWindow(QWidget *parent)
     MainWindow::setFixedSize(1200, 800);
 
     line_pen.setWidth(2);
+
+    ///Starts a thread for finding new connections
+    QThread* thread = new QThread();
+    runSim* fPort = new runSim();
+    fPort->moveToThread(thread);
+    connect( thread, &QThread::started, fPort, &runSim::runThread);
+    connect( thread, &QThread::finished, thread, &QThread::deleteLater);
+    thread->start();
+
+    connect(fPort,SIGNAL(command_arm()),this,SLOT(move_arm()));
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void runSim::runThread(){
+    while(true){
+        emit command_arm();
+        QThread::msleep(10);
+    }
 }
 
 int in_to_pix(int input)
@@ -81,6 +99,52 @@ float wrap360(float input)
 //    else if(input < -180) input += 180;
 
     return input;
+}
+
+void MainWindow::move_arm()
+{
+    float l_target = ui->lower_arm_angle->value();
+    float u_target = ui->upper_arm_angle->value();
+
+    float l_speed = ui->lower_arm_speed->value();
+    float u_speed = ui->upper_arm_speed->value();
+
+    l_target = wrap360(l_target);
+
+    if(l_target > l_max) l_target = l_max;
+    else if(l_target < l_min) l_target = l_min;
+
+    if(qAbs(l_arm_angle - l_target) <= l_speed)
+    {
+        l_arm_angle = l_target;
+    }
+    else if(l_arm_angle < l_target)
+    {
+        l_arm_angle += l_speed;
+    }
+    else if(l_arm_angle > l_target)
+    {
+        l_arm_angle -= l_speed;
+    }
+
+    if(qAbs(u_arm_angle - u_target) <= u_speed)
+    {
+        u_arm_angle = u_target;
+    }
+    else if(u_arm_angle < u_target)
+    {
+        u_arm_angle += u_speed;
+    }
+    else if(u_arm_angle > u_target)
+    {
+        u_arm_angle -= u_speed;
+    }
+
+    ui->lower_arm_at->setValue(l_arm_angle);
+    ui->upper_arm_at->setValue(u_arm_angle);
+
+    draw_scene();
+    draw_arm();
 }
 
 void MainWindow::draw_ray(float x1, float y1, float x2, float y2)
@@ -127,8 +191,6 @@ void MainWindow::draw_scene()
     float target_y = ui->arm_y->value();
     draw_ray(target_x - 1, target_y, target_x + 1, target_y);
     draw_ray(target_x, target_y - 1, target_x, target_y + 1);
-
-    sim->addEllipse(-in_to_pix(l_arm + u_arm), -in_to_pix(l_arm + u_arm) / 2, in_to_pix(l_arm + u_arm) * 2, in_to_pix(l_arm + u_arm) * 2, line_pen);
 }
 
 void MainWindow::draw_arm()
@@ -150,17 +212,17 @@ void MainWindow::on_lower_arm_angle_valueChanged(double arg1)
     if(arg1 > l_max) arg1 = l_max;
     else if(arg1 < l_min) arg1 = l_min;
 
-    l_arm_angle = arg1;
-    draw_scene();
-    draw_arm();
+//    l_arm_angle = arg1;
+//    draw_scene();
+//    draw_arm();
 }
 
 void MainWindow::on_upper_arm_angle_valueChanged(double arg1)
 {
     //Setting actual position of upper arm
-    u_arm_angle = arg1;
-    draw_scene();
-    draw_arm();
+//    u_arm_angle = arg1;
+//    draw_scene();
+//    draw_arm();
 }
 
 float sign(float input)
@@ -213,3 +275,34 @@ void MainWindow::on_arm_y_valueChanged(double arg1)
     arm_y = arg1;
     calc_angle();
 }
+
+void MainWindow::on_cone_3_clicked()
+{
+    ui->arm_x->setValue(55);
+    ui->arm_y->setValue(33);
+}
+
+void MainWindow::on_grab_clicked()
+{
+    ui->arm_x->setValue(-10);
+    ui->arm_y->setValue(3);
+}
+
+void MainWindow::on_hold_clicked()
+{
+    ui->arm_x->setValue(0);
+    ui->arm_y->setValue(8);
+}
+
+void MainWindow::on_place_cone_3_clicked()
+{
+    ui->arm_x->setValue(55);
+    ui->arm_y->setValue(30);
+}
+
+void MainWindow::on_pre_place_clicked()
+{
+    ui->lower_arm_angle->setValue(-33);
+    ui->upper_arm_angle->setValue(69);
+}
+
